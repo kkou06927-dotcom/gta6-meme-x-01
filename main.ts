@@ -7,7 +7,7 @@
 // the same JSON into the output directory. Nothing here reads the clock,
 // rolls dice or touches the network, so two runs produce identical bytes.
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -41,7 +41,13 @@ function main(): void {
   const url = readPostUrl(botDir());
   const out = outputDir();
   mkdirSync(out, { recursive: true });
-  writeFileSync(join(out, "POST.json"), JSON.stringify({ url }) + "\n", "utf8");
+  // Write to a temp file in the same directory, then rename it over the
+  // destination: a reader never sees a half-written POST.json, and the
+  // final bytes are exactly what a direct write would produce.
+  const target = join(out, "POST.json");
+  const temp = join(out, "POST.json.tmp");
+  writeFileSync(temp, JSON.stringify({ url }) + "\n", "utf8");
+  renameSync(temp, target);
 }
 
 main();
